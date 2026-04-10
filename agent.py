@@ -1,7 +1,7 @@
 import os
 import certifi
 
-# Fix for macOS SSL Certificate errors - MUST be before other imports
+# Fix for SSL Certificate errors - MUST be before other imports
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
 import logging
@@ -12,11 +12,10 @@ from livekit import agents, api
 from livekit.agents import AgentSession, Agent, RoomInputOptions
 from livekit.plugins import (
     openai,
-    cartesia,
+    inworld,
     deepgram,
     noise_cancellation,
     silero,
-    sarvam,
 )
 from livekit.agents import llm
 from typing import Annotated, Optional
@@ -30,39 +29,26 @@ logger = logging.getLogger("outbound-agent")
 
 import config
 
-# TRUNK ID - Now loaded from config.py
-# You can find this by running 'python setup_trunk.py --list' or checking LiveKit Dashboard 
+# TRUNK ID - Now loaded from config.py (Telnyx)
 
 
 def _build_tts(config_provider: str = None, config_voice: str = None):
     """Configure the Text-to-Speech provider based on env vars or dynamic config."""
     # Priority: Config > Env Var > Default
     provider = (config_provider or os.getenv("TTS_PROVIDER", config.DEFAULT_TTS_PROVIDER)).lower()
-    
-    # If using Sarvam Voice names (Anushka/Aravind), force Sarvam provider
-    if config_voice in ["anushka", "aravind", "amartya", "dhruv"]:
-        provider = "sarvam"
 
-    if provider == "cartesia":
-        logger.info("Using Cartesia TTS")
-        model = os.getenv("CARTESIA_TTS_MODEL", config.CARTESIA_MODEL)
-        voice = os.getenv("CARTESIA_TTS_VOICE", config.CARTESIA_VOICE)
-        return cartesia.TTS(model=model, voice=voice)
-    
-    if provider == "sarvam":
-        logger.info(f"Using Sarvam TTS (Voice: {config_voice})")
-        model = os.getenv("SARVAM_TTS_MODEL", config.SARVAM_MODEL)
-        # Use dynamic voice or env var or default
-        voice = config_voice or os.getenv("SARVAM_VOICE", "anushka")
-        language = os.getenv("SARVAM_LANGUAGE", config.SARVAM_LANGUAGE)
-        return sarvam.TTS(model=model, speaker=voice, target_language_code=language)
+    if provider == "inworld":
+        logger.info(f"Using Inworld TTS (Voice: {config_voice or config.INWORLD_VOICE})")
+        model = os.getenv("INWORLD_TTS_MODEL", config.INWORLD_MODEL)
+        voice = config_voice or os.getenv("INWORLD_TTS_VOICE", config.INWORLD_VOICE)
+        return inworld.TTS(model=model, voice=voice)
 
     if provider == "deepgram":
         logger.info("Using Deepgram TTS")
         model = os.getenv("DEEPGRAM_TTS_MODEL", "aura-asteria-en")
         return deepgram.TTS(model=model)
 
-    # Default to OpenAI
+    # Fallback to OpenAI
     logger.info(f"Using OpenAI TTS (Voice: {config_voice})")
     model = os.getenv("OPENAI_TTS_MODEL", "tts-1")
     voice = config_voice or os.getenv("OPENAI_TTS_VOICE", config.DEFAULT_TTS_VOICE)
@@ -130,8 +116,6 @@ class TransferFunctions(llm.ToolContext):
         logger.info(f"Transferring call to {destination}")
         
         # Determine the participant identity
-        # For outbound calls initiated by this agent, the participant identity is typically "sip_<phone_number>"
-        # For inbound, we might need to find the remote participant.
         participant_identity = None
         
         # If we stored the phone number from metadata, we can construct the identity
@@ -250,16 +234,13 @@ async def entrypoint(ctx: agents.JobContext):
             should_dial = True
             logger.info("User not in room. Agent will initiate dial-out.")
         else:
-            logger.info("User already in room (Dashboard dispatched). output Only generated greeting.")
+            logger.info("User already in room (Dashboard dispatched). Generating greeting only.")
 
     if should_dial:
         logger.info(f"Initiating outbound SIP call to {phone_number}...")
         try:
             # Create a SIP participant to dial out
-            # This effectively "calls" the phone number and brings them into this room
-            # --- CONNECTING TO THE PHONE NETWORK ---
-            # This step actually "dials" the number using Vobiz (SIP Trunk).
-            # It invites the phone number into this digital room.
+            # This uses the Telnyx SIP trunk to call the phone number
             await ctx.api.sip.create_sip_participant(
                 api.CreateSIPParticipantRequest(
                     room_name=ctx.room.name,
@@ -271,11 +252,6 @@ async def entrypoint(ctx: agents.JobContext):
             )
             logger.info("Call answered! Agent is now listening.")
             
-            # Note: We do NOT generate an initial reply here immediately.
-            # Usually for outbound, we want to hear "Hello?" from the user first,
-            # OR we can speak immediately. 
-            # If you want the agent to speak first, uncomment the lines below:
-            
             await session.generate_reply(
                 instructions=config.INITIAL_GREETING
             )
@@ -285,9 +261,8 @@ async def entrypoint(ctx: agents.JobContext):
             # Ensure we clean up if the call fails
             ctx.shutdown()
     else:
-        # Fallback for inbound calls (if this agent is used for that) OR Dashboard calls where user is already there
+        # Fallback for inbound calls OR Dashboard calls where user is already there
         logger.info("Detecting if we should greet...")
-        # Give a small delay for audio to stabilize if user just joined
         await session.generate_reply(instructions=config.fallback_greeting)
 
 

@@ -1,5 +1,10 @@
 import asyncio
 import os
+import certifi
+
+# Fix SSL
+os.environ['SSL_CERT_FILE'] = certifi.where()
+
 from dotenv import load_dotenv
 from livekit import api
 
@@ -8,15 +13,14 @@ load_dotenv(".env")
 
 async def main():
     # Initialize LiveKit API
-    # Credentials (LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET) are auto-loaded from .env
     lkapi = api.LiveKitAPI()
     sip = lkapi.sip
     
     trunk_id = os.getenv("OUTBOUND_TRUNK_ID")
-    address = os.getenv("VOBIZ_SIP_DOMAIN")
-    username = os.getenv("VOBIZ_USERNAME")
-    password = os.getenv("VOBIZ_PASSWORD")
-    number = os.getenv("VOBIZ_OUTBOUND_NUMBER")
+    address = os.getenv("TELNYX_SIP_DOMAIN", "sip.telnyx.com")
+    username = os.getenv("TELNYX_USERNAME")
+    password = os.getenv("TELNYX_PASSWORD")
+    number = os.getenv("TELNYX_OUTBOUND_NUMBER")
     
     if not trunk_id:
         print("Error: OUTBOUND_TRUNK_ID not found in .env")
@@ -37,7 +41,6 @@ async def main():
             numbers=[number] if number else [],
         )
         print("\n✅ SIP Trunk updated successfully!")
-        print("The 'max auth retry attempts' error should be resolved now.")
         
     except Exception as e:
         print(f"\n❌ Failed to update trunk: {e}")

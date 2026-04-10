@@ -2,7 +2,7 @@ import asyncio
 import os
 import certifi
 
-# Fix SSL on macOS
+# Fix SSL
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
 from dotenv import load_dotenv
@@ -17,18 +17,18 @@ async def main():
     key = os.getenv("LIVEKIT_API_KEY")
     secret = os.getenv("LIVEKIT_API_SECRET")
 
-    # SIP Credentials
-    sip_address = os.getenv("VOBIZ_SIP_DOMAIN")
-    username = os.getenv("VOBIZ_USERNAME")
-    password = os.getenv("VOBIZ_PASSWORD")
-    number = os.getenv("VOBIZ_OUTBOUND_NUMBER")
+    # Telnyx SIP Credentials
+    sip_address = os.getenv("TELNYX_SIP_DOMAIN", "sip.telnyx.com")
+    username = os.getenv("TELNYX_USERNAME")
+    password = os.getenv("TELNYX_PASSWORD")
+    number = os.getenv("TELNYX_OUTBOUND_NUMBER")
 
     if not (url and key and secret):
         print("Error: Missing LiveKit credentials")
         return
 
     if not (sip_address and username and password):
-        print("Error: Missing SIP credentials (VOBIZ_SIP_DOMAIN, VOBIZ_USERNAME, VOBIZ_PASSWORD)")
+        print("Error: Missing SIP credentials (TELNYX_SIP_DOMAIN, TELNYX_USERNAME, TELNYX_PASSWORD)")
         return
 
     lkapi = api.LiveKitAPI(url=url, api_key=key, api_secret=secret)
@@ -37,7 +37,7 @@ async def main():
         print(f"Creating SIP Trunk for {sip_address}...")
         
         trunk_info = SIPOutboundTrunkInfo(
-            name="Vobiz Trunk",
+            name="Telnyx Trunk",
             address=sip_address,
             auth_username=username,
             auth_password=password,
@@ -52,6 +52,9 @@ async def main():
         print(f"Trunk ID: {trunk.sip_trunk_id}")
         print(f"Name: {trunk.name}")
         print(f"Numbers: {trunk.numbers}")
+        print(f"\n📋 Copy this Trunk ID into your .env file:")
+        print(f"   TELNYX_SIP_TRUNK_ID={trunk.sip_trunk_id}")
+        print(f"   OUTBOUND_TRUNK_ID={trunk.sip_trunk_id}")
         
     except Exception as e:
         print(f"\n❌ Error creating trunk: {e}")

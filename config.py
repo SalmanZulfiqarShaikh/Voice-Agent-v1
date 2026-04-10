@@ -43,25 +43,21 @@ STT_LANGUAGE = "en"   # "en" supports multi-language code switching in Nova 2
 
 
 # --- 3. TEXT-TO-SPEECH (TTS) SETTINGS ---
-# Choose your voice provider: "openai", "sarvam" (Indian voices), or "cartesia" (Ultra-fast)
-DEFAULT_TTS_PROVIDER = "openai" 
-DEFAULT_TTS_VOICE = "alloy"      # OpenAI: alloy, echo, shimmer | Sarvam: anushka, aravind
+# Using Inworld AI for ultra-fast, high-quality TTS
+DEFAULT_TTS_PROVIDER = "inworld"
+DEFAULT_TTS_VOICE = "Hades"  # Inworld voices: Hades, Ashley, etc.
 
-# Sarvam AI Specifics (for Indian Context)
-SARVAM_MODEL = "bulbul:v2"
-SARVAM_LANGUAGE = "en-IN" # or hi-IN
-
-# Cartesia Specifics
-CARTESIA_MODEL = "sonic-2"
-CARTESIA_VOICE = "f786b574-daa5-4673-aa0c-cbe3e8534c02"
+# Inworld Specifics
+INWORLD_MODEL = "inworld-tts-1"
+INWORLD_VOICE = "Hades"
 
 
 # --- 4. LARGE LANGUAGE MODEL (LLM) SETTINGS ---
-# Choose "openai" or "groq"
-DEFAULT_LLM_PROVIDER = "openai"
-DEFAULT_LLM_MODEL = "gpt-4o-mini" # OpenAI default
+# Using Groq for ultra-fast inference
+DEFAULT_LLM_PROVIDER = "groq"
+DEFAULT_LLM_MODEL = "gpt-4o-mini"  # OpenAI fallback if needed
 
-# Groq Specifics (Faster inference)
+# Groq Specifics (Primary LLM)
 GROQ_MODEL = "llama-3.3-70b-versatile"
 GROQ_TEMPERATURE = 0.7
 
@@ -70,6 +66,6 @@ GROQ_TEMPERATURE = 0.7
 # Default number to transfer calls to if no specific destination is asked.
 DEFAULT_TRANSFER_NUMBER = os.getenv("DEFAULT_TRANSFER_NUMBER")
 
-# Vobiz Trunk Details (Loaded from .env usually, but you can hardcode if needed)
-SIP_TRUNK_ID = os.getenv("VOBIZ_SIP_TRUNK_ID")
-SIP_DOMAIN = os.getenv("VOBIZ_SIP_DOMAIN")
+# Telnyx Trunk Details (Loaded from .env)
+SIP_TRUNK_ID = os.getenv("TELNYX_SIP_TRUNK_ID")
+SIP_DOMAIN = os.getenv("TELNYX_SIP_DOMAIN")
